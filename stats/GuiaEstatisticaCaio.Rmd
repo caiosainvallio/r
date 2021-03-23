@@ -1,0 +1,412 @@
+---
+title: "Guia Estatístico Caio"
+author: "@caiosainvallio"
+date: "2019"
+output: 
+  html_document:
+    theme: paper
+    toc: TRUE
+    toc_float: TRUE
+---
+
+# ANOVA
+
+\ 
+
+## Pressupostos para usar ANOVA
+
+* A variável dependente deve ser contínua
+* As observações em cada grupo devem possuir uma distribuição, aproximadamente normal
+* As variâncias em cada grupo devem ser aproximadamente iguais
+* Todas as observações devem ser independentes
+
+Para ajudar na concatenação dos dados (largos para longos), usar a função `melt()` do pacote `reshape2`:
+```{r}
+# library(reshape2) # pacote para concatenar variáveis
+# melt(df)
+```
+
+\ 
+
+
+## Saber se as observações em cada grupo possuem uma distribuição aproximadamente normal
+
+\ 
+
+**Teste de normalidade (Shapiro-Wilk):**
+
+A hipótese nula do teste de Shapiro-Wilk é que a amostra **possui distribuição normal**. Portanto, um valor de p < 0.05 indica que você rejeitou a hipótese nula, ou seja, seus dados não possuem distribuição normal.
+
+* p >= 0,05 = Distribuição normal (Aceita $ H_0 $)
+* p < 0,05 = Distribuição não normal (Rejeita $ H_0 $)
+
+\ 
+
+### Teste de Shapiro-Wilk
+```{r}
+# df %>% 
+#   summarise(valor_p = shapiro.test(...variavel...)$p.value,
+#             sig.stat = ifelse(valor_p < 0.05, "não normal", "normal")) %>% 
+#   kable()%>%
+#   kable_styling(fixed_thead = T)
+```
+
+\ 
+
+> Se o pressuposto da distribuição apriximadamente normal for respeitado, testar se as variâncias em cada grupo são aproximadamente iguais com o **Teste de Bartlett**
+
+\ 
+
+## Saber se as variâncias em cada grupo são aproximadamente iguais (homocedasticidade)
+
+\ 
+
+**Teste de homogeneidade de variâncias - *paramétrico* (Bartlett):**
+
+O teste de Bartlett é sensível em relação a hipótese de normalidade dos dados. Se rejeitarmos a hipótese de normalidade, é melhor utilizarmos o teste proposto por Levene. Porém, se a hipótese de normalidade não for violada, o teste proposto por Bartlett tem um comportamento melhor que o teste proposto por Levene.
+
+A hipótese nula do teste de Bartlett é que as variâncias **são homogêneas**. Portanto, um valor de p < 0.05 indica que você rejeitou a hipótese nula, ou seja, as variâncias não são homogêneas.
+
+* p >= 0,05 = Homogeneidade das variâncias (Não rejeita $H_0$ )
+* p < 0,05 = Não homogeneidade das variâncias (Rejeita $H_0$ )
+
+### Teste de Bartlett
+```{r}
+# bartlett.test(..variavel_contínua.. ~ ..categoria.., data = df)
+```
+
+\ 
+
+> Se o pressuposto da distribuição apriximadamente normal não for respeitado, testar se as variâncias em cada grupo são aproximadamente iguais com o **Teste de Levene**
+
+\ 
+\ 
+
+**Teste de homogeneidade de variâncias - *não paramétrico* (Levene):**
+
+Uma transformação (robusta) alternativa considerada para o procedimento de Levene, é substituir a média pela mediana.
+
+A hipótese nula do teste de Levene é que as variâncias **são homogêneas**. Portanto, um valor de p < 0.05 indica que você rejeitou a hipótese nula, ou seja, as variâncias não são homogêneas.
+
+* p >= 0,05 = Homogeneidade das variâncias (Não rejeita $ H_0 $)
+* p < 0,05 = Não homogeneidade das variâncias (Rejeita $ H_0 $)
+
+### Teste de Levene
+```{r}
+# if(!require(car)){
+#     install.packages("car")
+# }
+# 
+# car::leveneTest(..variavel_contínua.. ~ ..grupos.., data = df)
+```
+
+\ 
+
+> **Desvios das Suposições:** Se as suposições de Normalidade ou Igualdade de Variâncias não estiverem satisfeitas, podem ser feitas transformações nos dados. No caso de não ser encontrada uma transformação adequada, podem ser adotadas técnicas não paramétrica
+
+\ 
+
+## ANOVA
+
+Caso as suposições...
+
+* A variável dependente deve ser contínua
+* As observações em cada grupo devem possuir uma distribuição, aproximadamente normal
+* As variâncias em cada grupo devem ser aproximadamente iguais
+
+...forem respeitadas, pode-se realizar a ANOVA.
+
+### One Way ANOVA
+```{r}
+# aov(..variavel_contínua.. ~ ..grupos.., data = df)
+
+# sumary(aov(..variavel_contínua.. ~ ..grupos.., data = df))
+```
+
+\ 
+
+### Two (2xk) Way ANOVA
+```{r}
+# aov(..variavel_contínua.. ~ ..grupos.. + ..fator.., data = df)
+# aov(..variavel_contínua.. ~ ..grupos.. * ..fator.., data = df)
+```
+
+
+
+### exemplo de visualização ANOVA de 2xk fatores
+
+### Boxplot por alinhamemto
+```{r}
+# df_longo %>% 
+#   ggplot(aes(x = peso, y = valor)) +
+#   geom_boxplot() +
+#   facet_wrap(~ alinhamento)
+```
+
+### Interação por Alinhamento
+```{r }
+# interaction.plot(x.factor = df_longo$alinhamento,    # variable to plot on x-axis
+#                  trace.factor = df_longo$peso, # variable to specify "traces"; here, lines
+#                  response = df_longo$valor,    # variable to plot on y-axis
+#                  fun = median,  # summary statistic to be plotted for response variable
+#                  type = "l",     # type of plot, here "l" for lines
+#                  ylab = "Mediana de Movimento",
+#                  xlab = "Alinhamento",
+#                  trace.label = "Peso",  # label for legend
+#                  xpd = FALSE)  # 'clip' legend at border
+```
+
+### Boxplot por Peso
+```{r}
+# df_longo %>% 
+#   ggplot(aes(x = alinhamento, y = valor)) +
+#   geom_boxplot() +
+#   facet_wrap(~ peso)
+```
+
+### Interação  por Peso
+```{r}
+# interaction.plot(x.factor = df_longo$peso,    # variable to plot on x-axis
+#                  trace.factor = df_longo$alinhamento, # variable to specify "traces"; here, lines
+#                  response = df_longo$valor,    # variable to plot on y-axis
+#                  fun = median,  # summary statistic to be plotted for response variable
+#                  type = "l",     # type of plot, here "l" for lines
+#                  ylab = "Mediana de Movimento",
+#                  xlab = "Peso",
+#                  trace.label = "Alinhamento",  # label for legend
+#                  xpd = FALSE)  # 'clip' legend at border
+```
+
+\ 
+\ 
+
+**Testar o último pressuposto - independência**
+
+Antes de verificar qual ou quais regiões são distintas entre sí (independentes), é importante verificar o pressuposto de independência das observações. Este pressuposto pode ser avaliado através da análise dos resíduos do modelo ANOVA.
+
+Aplicando a função genérica plot() do R aos resíduos do modelo, que podem ser acessados pela função residuals() ao objeto que armazena os resultados do modelo ANOVA pode-se visualizar a distribuição dos resíduos e sua independência à cada observação. Outra forma de visualizar esta independência dos dados sobre a análise dos resíduos de um modelo esta centrada na distribuição dos mesmos. Espera-se que os resíduos de um modelo bem ajustado possua uma distribuição normal, centrada em 0 e variância constante.
+
+```{r}
+# # Plotar os gráficos de resíduos
+# plot(result_anova)
+# 
+# # teste de normalidade para os resíduos caso haja dúvidas
+# shapiro.test(residuals(result_anova))
+# 
+# # Diagrama de dispersão dos resíduos
+# plot(residuals(result_anova))
+# 
+# # Histograma dos resíduos
+# hist(residuals(result_anova))
+```
+
+\ 
+\ 
+
+
+
+## Análise a posteriori (Post hoc analysis)
+
+Análise a posteriori é quando um procedimento estatístico é realizado para analisar padrões nos dados, que não foram determinados a priori, após o experimento ter sido concluído. Portanto, é recomendável **não** fazer este tipo de procedimento **antes de realizar o ANOVA**, ou seja, **não se faz comparações múltiplas antes**, mas depois, caso você tenha obtido um valor **significativo na ANOVA**. É como se conduzíssemos vários testes t ao invés de usar ANOVA. Múltiplas comparações não são procedimentos adequados pois, quando se faz múltiplas comparações simples (1 a 1), **ignoramos as informações dos grupos deixados de lado nesta comparação**. Além disso, a chance de cometermos erro do tipo I cresce a medida que mais comparações (testes) são feitos. Por outro lado, a análise post hoc é necessária para entender onde as diferenças se encontram caso obtenhamos efeito no ANOVA quando existem mais de dois grupos. Existem diversas abordagens para realizar esta análise a posteriori desde as mais conservadoras que de certa forma levam em consideração a probabilidade de cometer este erro (`Tukey` e `Bonferroni`)*, até as menos conservadoras que não levam em consideração (Fisher's `LSD`).
+
+*Tukey deve ser adotado quando tivermos interesse em todas as possíveis comparações de médias duas a duas. Quando o número de comparações for pequeno, Bonferroni é mais preciso que o Tukey.
+
+\ 
+
+**Teste de Tukey (honestly significant difference - HSD)**
+
+O teste de Tukey é similar ao `teste t`, mas tenta levar em consideração a inflação do erro tipo I ao fazer comparações múltiplas. É um teste honesto por que, para cada comparação duas a duas, a taxa de erro dos testes é exatamente $ \alpha $. Por esse motivo o teste de Tukey resulta em intervalos de confiança menores.
+
+
+### Teste te Tukey
+```{r}
+# # Resultados
+# TukeyHSD(resultado_anova)
+# 
+# # Plotar gráfico com os IC95%
+# plot(TukeyHSD(resultado_anova))
+```
+
+\ 
+\ 
+
+
+**Teste de Fisher (ou LSD)**
+
+O método de Fisher, para comparar todos pares de médias, controla a taxa de erro ao nível de significância $ \alpha $ para cada comparação dois a dois, mas não controla a taxa de erro do experimento. 
+
+O procedimento de  Fisher consiste em realizar testes t múltiplos, cada um ao nível de  significância $ \alpha $, somente se o teste F preliminar é significante ao nível $ \alpha $. Este pode ser visto como um procedimento de duas etapas em que a hipótese nula $ H_0 $ é testada no primeiro passo por um teste F de nível $ \alpha $. Se o teste F não é significativo, o procedimento termina sem precisar fazer inferências detalhadas nas diferenças dos pares das médias; caso contrário, cada diferença de par é testada por um teste t com nível $ \alpha $ de significância. Esse procedimento é chamado de teste da diferença mínima significativa (least significant difference (LSD) test).
+
+O LSD controla a taxa de erro do experimento ao nível $ \alpha $ sobre $ H_0 $ devido a  "proteção" fornecida para essa hipótese pelo teste F preliminar. No entanto, em outras configurações (hipóteses) de médias verdadeiras, a taxa de erro do experimento pode ser maior que $ \alpha $.
+
+### Tetse de HSD de Fisher
+```{r}
+# pairwise.t.test(x = ..valor.., g = ..grupo..,  p.adjust.method = "none")
+```
+
+Há um segundo procedimento de Fisher popularmente chamado como procedimento de Bonferroni que controla a taxa de família de erros do experimento no sentido forte, ou seja, em todas as configurações (hipóteses).
+
+\ 
+\ 
+
+**Correção de Bonferroni**
+
+O segundo método de comparação múltipla proposto por Fisher e usualmente chamado de teste, procedimento ou correção de Bonferroni, consiste na realização de um teste $ t $ para cada par de médias a uma  taxa de erro por comparação de $ \frac{\alpha}{\binom{k}{2}} $. Usando esse teste, o nível de significância da família (modelo final completo) é no máximo $ \alpha $, para qualquer configuração (formação) das médias da população. Dessa forma, temos que o teste de Bonferroni protege a taxa de erro da família dos testes. Isso ilustra a taxa de erro conhecida como taxa de erro por família, que como vimos representa o valor esperado de erros na família.
+
+O teste de Bonferroni pode ser usado para quaisquer que sejam os dados balanceados ou não balanceados. Não é um teste exato, sendo baseado em uma aproximação conhecida como primeira desigualdade de Bonferroni. Em algumas situações, o teste de Bonferroni se mostra bastante "conservativo" (fraco), isto é, a taxa de erro da família de testes (FWER) é muito menor do que o nível de significância $ \alpha $ estabelecido. Para  a família de todas as comparações duas a duas, irá produzir intervalos de confiança maiores que o teste de Tukey.
+
+### Correção de Bonferroni
+```{r}
+# pairwise.t.test(x = ..valor.., g = ..grupo..,  p.adjust.method = "bonferroni")
+```
+
+\ 
+\ 
+
+**Teste de Sheffe**
+
+O método de Sheffe também pode  ser usado para a família de todas as comparações duas a duas, mas quase sempre resultará em intervalos de confiança maiores que os métodos  de **Tukey**, **Fisher** e **Bonferroni**.
+
+\ 
+\ 
+
+**Conclusão**
+
+Em conclusão, não existe um teste melhor que o outro sendo possível notar que todos eles tem sido usados na literatura. Em geral, é dito que o Fisher’s **LSD** é o mais **liberal**, o **Bonferroni** é o mais **conservador** e o **Tukey** é o mais **honesto**.
+
+\ 
+\ 
+
+## Pressuspostos não-validado
+
+Caso as suposições...
+
+* A variável dependente deve ser contínua
+* As observações em cada grupo devem possuir uma distribuição, aproximadamente normal
+* As variâncias em cada grupo devem ser aproximadamente iguais
+
+...**não** forem respeitadas, **não** pode-se realizar a ANOVA, usa-se então:
+
+
+**Teste de Kruskal-Wallis no lugar da One-way ANOVA**
+
+O teste de Kruskal-Wallis (rank test) é uma alternativa não paramétrica ao teste one-way ANOVA, que amplia o teste de duas amostras de Wilcoxon na situação em que há mais de dois grupos. É recomendado quando as suposições do teste ANOVA unidirecional não são atendidas. O teste de Kruskal-Wallis pode ser executado independetemente do tipo de dados, entretanto tem dificuldades em identificar diferenças entre grupos, geralmente devolve valores p mais elevados.
+
+Kruskal-Wallis test by rank is a non-parametric alternative to one-way ANOVA test, which extends the two-samples Wilcoxon test in the situation where there are more than two groups. It’s recommended when the assumptions of one-way ANOVA test are not met.
+
+### Teste de Kruskal-Wallis
+```{r}
+# kruskal.test(..valor.. ~ ..grupo.., data = df)
+```
+
+\ 
+\ 
+
+## Análise post hoc para o teste de Kruskal-Wallis
+
+**Pairwise Mann–Whitney U-tests**
+
+Uma abordagem post-hoc não paramétrica é usar testes U Mann-Whitney pareados. Para evitar a inflação das taxas de erro do tipo I, ajustes nos valores p podem ser realizados (Benjamini & Hochberg (1995) - "BH")
+
+## Pairwise Mann–Whitney U-tests
+```{r}
+# pairwise.wilcox.test(df$valor, df$grupo, p.adjust.method = "BH")
+```
+
+\ 
+
+**Dunn test for multiple comparisons**
+
+Se o teste de Kruskal-Wallis for significativo, uma análise post-hoc pode ser realizada para determinar quais níveis da variável independente diferem um do outro. Provavelmente, o teste mais popular para isso é o teste Dunn.
+
+## Dunn test for multiple comparisons
+```{r}
+# # para teste de comparação múltipla para Kruskal-Wallis
+# if(!require(PMCMRplus)){
+#     install.packages("PMCMRplus")
+# }
+# 
+# # Comparações todos por todos
+# PMCMRplus::kwAllPairsDunnTest(kruskal.test(valor ~ grupo, data = df))
+# 
+# # Comparações todos por um
+# PMCMRplus::kwManyOneDunnTest(kruskal.test(valor ~ grupo, data = df))
+# 
+# # Pacote mais antigo
+# PMCMR::posthoc.kruskal.dunn.test()
+```
+
+\ 
+
+**Nemenyi test for multiple comparisons**
+
+Zar (2010) sugere que o teste Nemenyi não é apropriado para grupos com números desiguais de observações. Se o número de observaçoes forem desiguais usar o teste de Nemenyi.
+
+## Nemenyi test for multiple comparisons
+```{r}
+# # para teste de comparação múltipla para Kruskal-Wallis
+# if(!require(PMCMRplus)){
+#     install.packages("PMCMRplus")
+# }
+# 
+# # Comparações todos por todos
+# PMCMRplus::kwAllPairsNemenyiTest(kruskal.test(valor ~ grupo, data = df))
+# 
+# # Comparações todos por um
+# PMCMRplus::kwManyOneNdwTest(kruskal.test(valor ~ grupo, data = df))
+# 
+# # Pacote mais antigo
+# PMCMR::posthoc.kruskal.nemenyi.test()
+```
+
+\ 
+
+**ANOVA por ranks no logar de ANOVA de 2xk fatores**
+
+No caso de os pressupostos serem violados, o teste de escolha é o não paramétrico. Entretanto, não há um teste não paramétrico equivalente como o Kruskal-Wallis para dois fatores. A recomendação é usar uma transformação onde se realiza uma substituição das observações da variável pelos seus postos (ranks) e rodar a ANOVA neste novo dataset.[^2]
+
+
+## ANOVA rank transformation
+```{r}
+# summary(aov(rank(valor) ~ grupo * fator, data = df))
+# 
+# # Mesmo resultado
+# anova(lm(rank(valor) ~ grupo * fator, data = df))
+```
+
+
+A ANOVA sobre os postos pode depois ser complementada pelos testes post-hoc usuais, bastando para isso ter novamente o cuidado de usar sempre rank(nome) como variável de resposta. A interpretação destes testes não deve é ser em termos de médias da variável de resposta, mas sim, naturalmente, em termos do rank médio das observações dos grupos. I.e. “grupo A tem rank médio maior que grupo B” ou algo de semelhante.
+
+A ANOVA sobre os postos também pode ser usada como uma alternativa ao teste de Kruskal-Wallis para o caso de 1 fator, com a vantagem de poder ser seguida de um banal teste de Tukey sobre os postos.
+
+**Crítica da ANOVA por ranks**
+
+A possibilidade de fazer uma ANOVA por ranks pode levar-nos a pensar que este método é uma boa solução sempre que os pressupostos da ANOVA não forem validados. Ora se por um lado é verdade que isso torna tudo muito mais simples, por outro lado há que notar duas coisas.
+
+Em primeiro lugar, para o caso de planeamento de 1 fator, os p-values de uma ANOVA sobre os ranks são diferentes dos de um teste de Kruskal-Wallis, que é um teste exato. Apesar de, como Conover e Iman argumentaram, não haver grandes diferenças entre os dois testes, elas existem. Assim, é apenas recomendado recorrer a uma ANOVA RT se não houver na literatura um outro teste não- paramétrico para analisar o planeamento experimental em questão.
+
+Em segundo lugar, foi descoberto[^3] que para os planeamentos fatoriais, como a ANOVA de 2 ou mais fatores, o p-value do teste de interação por ranks deflaciona artificialmente quando há rejeição de H0 nos fatores 1 e 2. Que quer isto dizer? Simplesmente que numa ANOVA de 2 fatores por ranks, se a evidência apontar para que ambos os fatores influenciem a variável de resposta, é possível que o teste à interação fique enviesado no sentido de rejeição. Ou seja, que detetamos interações quando elas na verdade não existem.
+
+Este último problema pode ser resolvido da seguinte forma: se a ANOVA por ranks não der tripla rejeição de H0, então à partida está tudo bem e pode-se confiar nos resultados. Mas nos casos de tripla rejeição deve-se suspeitar do resultado ao teste de interação. Neste caso é ver o diagrama de interação para ajudar a decidir. Se não houver evidência clara de interação, a conclusão deve ser nesse sentido. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[^1]: R Core Team (2019). R: A language and environment for statistical computing. R
+  Foundation for Statistical Computing, Vienna, Austria. URL https://www.R-project.org/.
+  
+[^2]: Conover W, Iman R (1981). “Rank Transformations as a Bridge Between Parametric and Nonparametric Statistics” The American Statistician 35(3):124-129.
+
+[^3]: Sawilowsky S (1990). “Nonparametric tests of interaction in experimental design.” Review of Educational Research 60:91–126.
